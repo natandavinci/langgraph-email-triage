@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 import json
+from langgraph.graph import StateGraph, END
 
 load_dotenv()
 
@@ -185,23 +186,78 @@ Generate the customer reply now in email form using this informations.
 
     return {"final_answer": response.text}
 
+def route_email(state: GraphState) -> str:
+    sector = state["destination_sector"]
+
+    if sector == "Finance":
+        return "answer_finance"
+    
+    elif sector == "Support":
+        return "answer_support"
+    
+    elif sector == "Commercial":
+        return "answer_commercial"
+
+
+# Graph created
+
+graph = StateGraph(GraphState)
+
+graph.add_node("classify_email",
+               classify_email)
+
+graph.add_node("answer_finance",
+               answer_finance)
+
+graph.add_node("answer_support",
+               answer_support)
+
+graph.add_node("answer_commercial",
+               answer_commercial)
+
+# Edges
+
+graph.set_entry_point("classify_email")
+
+graph.add_conditional_edges(
+    "classify_email",
+    route_email,
+    {
+        "answer_finance": "answer_finance",
+        "answer_support": "answer_support",
+        "answer_commercial": "answer_commercial"
+    }
+                             )
+
+graph.add_edge("answer_finance",
+               END)
+
+graph.add_edge("answer_support",
+               END)
+
+graph.add_edge("answer_commercial",
+               END)
+
+app = graph.compile()
+
 
 # TEST
 
 if __name__ == "__main__":
 
-    example_state = {
+    inputs = {
 
     "sender_email": "cliente@email.com",
-    "body_email": "Preciso de ajuda com uma compra grande que desejo fazer, pode me direcionar? ",
-    "destination_sector": "Commercial",
+    "body_email": "Gostaria de saber se vocês têm interesse em fechar uma parceria de vendas com a nossa distribuidora. Aguardo retorno do setor de vendas. ",
+    "destination_sector": None,
     "final_answer": None
     
     }
 
-    print("Iniciando teste do node 4...")
+    print("Iniciando teste Completo...")
 
-    result = answer_commercial(example_state)
+    result = app.invoke(inputs)
 
-    print("Resultado do Nó 4:", result)
-    print("\nTexto da Resposta Gerada:\n", result["final_answer"])
+    print("\n--- RESULTADO FINAL DO ESTADO ---")
+    print("Setor Identificado:", result.get("destination_sector"))
+    print("\nResposta Gerada:\n", result.get("final_answer"))
