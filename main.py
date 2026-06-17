@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 import json
 from langgraph.graph import StateGraph, END
+from langchain_core.runnables.graph import MermaidDrawMethod
 
 load_dotenv()
 
@@ -261,3 +262,10 @@ if __name__ == "__main__":
     print("\n--- RESULTADO FINAL DO ESTADO ---")
     print("Setor Identificado:", result.get("destination_sector"))
     print("\nResposta Gerada:\n", result.get("final_answer"))
+
+    png_bytes = app.get_graph().draw_mermaid_png(
+                    draw_method=MermaidDrawMethod.API
+    )
+
+    with open("grafo_exemplo1.png", "wb") as f:
+        f.write(png_bytes)
