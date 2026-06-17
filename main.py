@@ -144,7 +144,47 @@ Generate the customer reply now in email form using this informations.
 
 # Node-4
 def answer_commercial(state:GraphState) -> dict:
-    pass
+    prompt = f"""
+You are Natanzinho_Commercial, a customer support commercial specialist for Neytans.
+
+Your task is to generate the next response that should be sent to the customer.
+
+# Instructions
+
+- Always respond in the Portuguese.
+- Be professional, friendly and concise.
+- Follow all procedures and guidelines provided below.
+- Return only the message that should be sent to the customer.
+- Do not explain your reasoning.
+- Do not use markdown.
+- Do not use headings.
+
+
+
+# Customer Info
+
+Sender email: {state["sender_email"]}
+
+# Email
+
+{state['body_email']}
+
+# Destination Sector
+
+{state['destination_sector']}
+
+
+Generate the customer reply now in email form using this informations.
+
+
+"""
+    response = client.models.generate_content(
+         model="gemini-2.5-flash",
+         contents=prompt
+    )
+
+    return {"final_answer": response.text}
+
 
 # TEST
 
@@ -153,15 +193,15 @@ if __name__ == "__main__":
     example_state = {
 
     "sender_email": "cliente@email.com",
-    "body_email": "Preciso de um suporte com meu sistema, pode me direcionar? o sistema não mostra os produtos",
-    "destination_sector": "Support",
+    "body_email": "Preciso de ajuda com uma compra grande que desejo fazer, pode me direcionar? ",
+    "destination_sector": "Commercial",
     "final_answer": None
     
     }
 
-    print("Iniciando teste do node 3...")
+    print("Iniciando teste do node 4...")
 
-    result = answer_support(example_state)
+    result = answer_commercial(example_state)
 
-    print("Resultado do Nó 3:", result)
+    print("Resultado do Nó 4:", result)
     print("\nTexto da Resposta Gerada:\n", result["final_answer"])
