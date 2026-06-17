@@ -2,7 +2,7 @@ from typing import Optional
 from typing_extensions import TypedDict
 
 # State
-class Email(TypedDict):
+class GraphState(TypedDict):
 
     sender_email: Optional[str]
 
@@ -13,17 +13,17 @@ class Email(TypedDict):
     final_answer: Optional[str]
 
 # Node-1
-def classifie_email(state: Email):
+def classify_email(state: GraphState) -> dict:
     pass
 
 # Node-2
-def  answer_finance(state: Email):
+def  answer_finance(state: GraphState) -> dict:
     pass
 
 # Node-3
-def answer_support(state: Email):
+def answer_support(state: GraphState) -> dict:
     pass
 
 # Node-4
-def answer_commercial(state:Email):
+def answer_commercial(state:GraphState) -> dict:
     pass

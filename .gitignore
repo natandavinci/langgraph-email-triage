@@ -1,0 +1,42 @@
+# Ignore the local .terraform state
+.terraform/
+
+# Ignore pycache
+__pycache__/
+
+# Ignore local package files
+*.egg-info
+
+# Ignore .idea directory
+.idea/
+
+# Avoid accidental uploads of intermediate lambda.zip files
+lambda.zip
+function.zip
+
+# Avoid upload of -tfvars file containing secrets
+*.tfvars
+
+# Ignore any local trypcomdata folders
+trypcomdata/
+trypcomfunctions/
+trypcomclasses/
+trypcomproviders/
+trypcomstaticdata/
+
+scripts/
+tests/
+
+dev/
+venv/
+build/
+.idea/
+.env
+.env.dev
+
+# uv (dev only)
+.venv/
+.uv/
+uv.lock
+.python-version
+pyproject.toml
