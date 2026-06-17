@@ -55,7 +55,50 @@ def classify_email(state: GraphState) -> dict:
 
 # Node-2
 def  answer_finance(state: GraphState) -> dict:
-    pass
+
+    prompt = f"""
+You are Natanzinho_Finance, a customer support finance specialist for Neytans.
+
+Your task is to generate the next response that should be sent to the customer.
+
+# Instructions
+
+- Always respond in the same language used by the customer.
+- Be professional, friendly and concise.
+- Follow all procedures and guidelines provided below.
+- Return only the message that should be sent to the customer.
+- Do not explain your reasoning.
+- Do not use markdown.
+- Do not use headings.
+
+
+
+# Customer Info
+
+Sender email: {state["sender_email"]}
+
+# Email
+
+{state['body_email']}
+
+# Destination Sector
+
+{state['destination_sector']}
+
+
+Generate the customer reply now in email form using this informations.
+
+ """
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+
+
+
+    return {"final_answer": response.text}
+
+
 
 # Node-3
 def answer_support(state: GraphState) -> dict:
@@ -72,14 +115,15 @@ if __name__ == "__main__":
     example_state = {
 
     "sender_email": "cliente@email.com",
-    "body_email": "Olá, gostaria de saber o boleto da minha mensalidade que vence amanhã. Podem me enviar o código de barras?",
-    "destination_sector": None,
+    "body_email": "Preciso da segunda via da nota fiscal do produto que comprei no mês passado, por favor.",
+    "destination_sector": "Finance",
     "final_answer": None
     
     }
 
-    print("Iniciando teste do nó de classificação...")
+    print("Iniciando teste do node 2...")
 
-    result = classify_email(example_state)
+    result = answer_finance(example_state)
 
-    print("Resultado do Nó 1:", result)
+    print("Resultado do Nó 2:", result)
+    print("\nTexto da Resposta Gerada:\n", result["final_answer"])
