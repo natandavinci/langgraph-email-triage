@@ -98,6 +98,37 @@ def enrich_data(state:GraphState) -> dict:
     print(f"💎 [DADOS ENRIQUECIDOS]: Cliente carimbado como nível: {nivel}")
 
     return {"account_level": nivel}
+
+# New function
+def answer_fallback(state:GraphState) -> dict:
+    print("\n🚨 [NÓ: FALLBACK]: Setor inválido ou falha de triagem. Gerando resposta de segurança...")
+    
+    prompt = f"""
+    You are Natanzinho_Specialist, a senior customer relations coordinator at Neytans.
+    We had a minor internal routing delay with your ticket, so I am taking over personally.
+    
+    Write a very polite email to the customer stating that their request has been received 
+    and a specialized human manager is reviewing it right now to give a precise answer within the next few hours.
+    
+    # Instructions
+    - Respond in Portuguese.
+    - Be extremely polite, professional, and reassuring.
+    - Do not use markdown or headings.
+    
+    # Customer Email
+    "{state['body_email']}"
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+
+    return {"final_answer": response.text, "destination_sector": "Human_Contigency"}
+
+
+
+
 # Node-2
 def  answer_finance(state: GraphState) -> dict:
 
@@ -256,6 +287,10 @@ def route_email(state: GraphState) -> str:
     
     elif sector == "Commercial":
         return "answer_commercial"
+    
+    else:
+        print(f"⚠️ [ROTEADOR]: Setor detectado '{sector}' é inválido! Desviando para o Fallback.")
+        return "fallback"
 
 
 # Graph created
@@ -277,6 +312,9 @@ graph.add_node("answer_commercial",
 graph.add_node("enrich_data",
                enrich_data)
 
+graph.add_node("answer_fallback",
+               answer_fallback)
+
 # Edges
 
 graph.set_entry_point("classify_email")
@@ -290,7 +328,8 @@ graph.add_conditional_edges(
     {
         "answer_finance": "answer_finance",
         "answer_support": "answer_support",
-        "answer_commercial": "answer_commercial"
+        "answer_commercial": "answer_commercial",
+        "fallback": "answer_fallback"
     }
                              )
 
@@ -303,6 +342,9 @@ graph.add_edge("answer_support",
 graph.add_edge("answer_commercial",
                END)
 
+graph.add_edge("answer_fallback",
+               END)
+
 memory = MemorySaver()
 
 app = graph.compile(checkpointer=memory)
@@ -311,32 +353,48 @@ app = graph.compile(checkpointer=memory)
 # TEST
 
 if __name__ == "__main__":
-    # A configuração que define qual gaveta do banco de dados estamos acessando
-    config = {"configurable": {"thread_id": "chamado_cliente_123"}}
+   # Criamos a configuração da Thread
+    config = {"configurable": {"thread_id": "teste_resiliencia_999"}}
 
-    # --- E-MAIL 1 (O início do problema) ---
-    email_1 = {
-        "sender_email": "rodrigo_premium@email.com",
-        "body_email": "Olá, meu painel de controle está dando tela em branco no navegador Chrome.",
-        "destination_sector": None, "urgency": None, "sentiment": None, "account_level": None, "history": [], "final_answer": None
+    # --- CENÁRIO DE INCÊNDIO: Forçando uma falha de Roteamento ---
+    # Imagine que por algum motivo o estado foi corrompido ou a IA viajou e carimbou "Recursos_Humanos"
+    email_com_erro = {
+        "sender_email": "usuario@email.com",
+        # Um texto completamente aleatório e confuso que não pertence a nenhum setor
+        "body_email": "xyz123999 dasdaaslkjdas dsa;ldkas;l dsa d;sa lkd;sa kdas;lkd;sa kda",
+        "destination_sector": None, 
+        "urgency": None,
+        "sentiment": None,
+        "account_level": None,
+        "history": [],
+        "final_answer": None
     }
 
-    print("📬 Rodando o Primeiro Atendimento...")
-    resultado_1 = app.invoke(email_1, config=config)
-    print(f"Resposta 1:\n{resultado_1['final_answer']}\n")
+    print("🔥 DISPARANDO TESTE DE ESTRESSE (SETOR INVÁLIDO)...")
+    
+    # O grafo deve rodar, passar pelo enrich_data, cair na aresta, perceber o erro e desviar para o Fallback
+    resultado_seguro = app.invoke(email_com_erro, config=config)
 
-    print("="*60)
+    print("\n--- 🏁 RELATÓRIO DE CONTINGÊNCIA ---")
+    print(f"📍 Setor Ajustado no Fallback: {resultado_seguro.get('destination_sector')}")
+    print(f"🎭 Sentimento Original:        {resultado_seguro.get('sentiment')}")
+    
+    print("\n📧 Resposta de Emergência Gerada:\n")
+    print("-" * 60)
+    print(resultado_seguro.get("final_answer"))
+    print("-" * 60)
 
-    # --- E-MAIL 2 (O cliente respondendo de volta na mesma thread) ---
-    email_2 = {
-        "sender_email": "rodrigo_premium@email.com",
-        "body_email": "Eu limpei o cache como você sugeriu mas o erro continua, o que eu faço agora?",
-        # Passamos os campos vazios porque o LangGraph vai puxar o passado do banco através do config
-        "destination_sector": None, "urgency": None, "sentiment": None, "account_level": None, "history": None, "final_answer": None
-    }
 
-    print("📬 Rodando o Segundo Atendimento (Lembrando do Passado)...")
-    resultado_2 = app.invoke(email_2, config=config)
-    print(f"Resposta 2:\n{resultado_2['final_answer']}\n")
+
+
+
+    png_bytes = app.get_graph().draw_mermaid_png(
+                    draw_method=MermaidDrawMethod.API
+    )
+
+    with open("grafo_exemplo1.png", "wb") as f:
+        f.write(png_bytes)
+
+
 
 
