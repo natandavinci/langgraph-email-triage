@@ -51,12 +51,6 @@ def classify_email(state: GraphState) -> dict:
 
     body_email = state["body_email"]
     
-    urgency = state["urgency"]
-
-    sentiment = state["sentiment"]
-
-    account_level = state["account_level"]
-
     prompt = f"""
         Você é um Analista de Triagem de IA Avançado.
         Sua tarefa é analisar o e-mail abaixo e extrair o setor responsável, o nível de urgência e o sentimento do cliente.
@@ -104,45 +98,39 @@ def enrich_data(state:GraphState) -> dict:
 # Node-2
 def  answer_finance(state: GraphState) -> dict:
 
+    print("\n💰 [NÓ: RESPOSTA FINANCEIRO]: Gerando resposta estratégica...")
+    
+    # Criamos regras dinâmicas de acordo com o estado do cliente
+    alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Cliente com fúria ou urgência crítica. Seja extremamente formal, peça desculpas pelo transtorno e dê garantias." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
+    tratamento_vip = "⭐ CLIENTE VIP: Adicione ao final da assinatura o carimbo 'Atendimento Premium Neytans'." if state["account_level"] == "VIP" else ""
+
     prompt = f"""
-You are Natanzinho_Finance, a customer support finance specialist for Neytans.
+    You are Natanzinho_Finance, a customer support finance specialist for Neytans.
+    Your task is to generate the next response that should be sent to the customer.
 
-Your task is to generate the next response that should be sent to the customer.
+    {alerta_prioridade}
+    {tratamento_vip}
 
-# Instructions
+    # Instructions
+    - Always respond in the same language used by the customer.
+    - Be professional, friendly and concise.
+    - Follow all procedures and guidelines provided.
+    - Return only the message that should be sent to the customer.
+    - Do not explain your reasoning, do not use markdown, and do not use headings.
 
-- Always respond in the same language used by the customer.
-- Be professional, friendly and concise.
-- Follow all procedures and guidelines provided below.
-- Return only the message that should be sent to the customer.
-- Do not explain your reasoning.
-- Do not use markdown.
-- Do not use headings.
+    # Context Data
+    Sender email: {state["sender_email"]}
+    Account Level: {state["account_level"]}
+    Customer Sentiment: {state["sentiment"]}
+    Urgency Level: {state["urgency"]}
 
+    # Customer Email
+    {state['body_email']}
 
-
-# Customer Info
-
-Sender email: {state["sender_email"]}
-
-# Email
-
-{state['body_email']}
-
-# Destination Sector
-
-{state['destination_sector']}
-
-
-Generate the customer reply now in email form using this informations.
-
- """
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
-
+    Generate the customer reply now in email form using this information.
+    """
+    
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
     return {"final_answer": response.text}
 
 
@@ -150,87 +138,70 @@ Generate the customer reply now in email form using this informations.
 # Node-3
 def answer_support(state: GraphState) -> dict:
 
-    prompt= f"""
+    print("\n🛠️ [NÓ: RESPOSTA SUPORTE]: Gerando resposta técnica...")
+    
+    alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Falha crítica de sistema ou cliente irritado. Ofereça uma solução imediata ou escalonamento imediato para engenharia." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
+    tratamento_vip = "⭐ CLIENTE VIP: Ofereça a opção de agendar uma chamada de suporte dedicada de 15 minutos." if state["account_level"] == "VIP" else ""
+
+    prompt = f"""
     You are Natanzinho_Support, a customer support specialist for Neytans.
+    Your task is to generate the next response that should be sent to the customer.
 
-Your task is to generate the next response that should be sent to the customer.
+    {alerta_prioridade}
+    {tratamento_vip}
 
-# Instructions
+    # Instructions
+    - Always respond in Portuguese.
+    - Be clear, objective, helpful and technical, yet highly polite.
+    - Return only the message that should be sent to the customer.
+    - Do not explain your reasoning, do not use markdown, and do not use headings.
 
-- Always respond in the Portuguese.
-- Be professional, friendly and concise.
-- Follow all procedures and guidelines provided below.
-- Return only the message that should be sent to the customer.
-- Do not explain your reasoning.
-- Do not use markdown.
-- Do not use headings.
+    # Context Data
+    Sender email: {state["sender_email"]}
+    Account Level: {state["account_level"]}
+    Customer Sentiment: {state["sentiment"]}
+    Urgency Level: {state["urgency"]}
 
+    # Customer Email
+    {state['body_email']}
 
-
-# Customer Info
-
-Sender email: {state["sender_email"]}
-
-# Email
-
-{state['body_email']}
-
-# Destination Sector
-
-{state['destination_sector']}
-
-
-Generate the customer reply now in email form using this informations.
-
-"""
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-
+    Generate the customer reply now in email form using this information.
+    """
+    
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
     return {"final_answer": response.text}
 
 # Node-4
 def answer_commercial(state:GraphState) -> dict:
+    print("\n🤝 [NÓ: RESPOSTA COMERCIAL]: Gerando proposta/retorno de negócios...")
+    
+    # Tratamento focado em conversão e retenção de parceiros de alto valor
+    tratamento_vip = "⭐ LEAD VIP: Trate como potencial parceiro estratégico nível Gold. Use tom altamente persuasivo." if state["account_level"] == "VIP" else ""
+
     prompt = f"""
-You are Natanzinho_Commercial, a customer support commercial specialist for Neytans.
+    You are Natanzinho_Commercial, a customer support commercial specialist for Neytans.
+    Your task is to generate the next response that should be sent to the customer.
 
-Your task is to generate the next response that should be sent to the customer.
+    {tratamento_vip}
 
-# Instructions
+    # Instructions
+    - Always respond in Portuguese.
+    - Be professional, commercial, enthusiastic and concise.
+    - Highlight our interest in evaluating solid opportunities.
+    - Return only the message that should be sent to the customer.
+    - Do not explain your reasoning, do not use markdown, and do not use headings.
 
-- Always respond in the Portuguese.
-- Be professional, friendly and concise.
-- Follow all procedures and guidelines provided below.
-- Return only the message that should be sent to the customer.
-- Do not explain your reasoning.
-- Do not use markdown.
-- Do not use headings.
+    # Context Data
+    Sender email: {state["sender_email"]}
+    Account Level: {state["account_level"]}
 
+    # Customer Email
+    {state['body_email']}
 
-
-# Customer Info
-
-Sender email: {state["sender_email"]}
-
-# Email
-
-{state['body_email']}
-
-# Destination Sector
-
-{state['destination_sector']}
-
-
-Generate the customer reply now in email form using this informations.
-
-
-"""
-    response = client.models.generate_content(
-         model="gemini-2.5-flash",
-         contents=prompt
-    )
-
+    Generate the customer reply now in email form using this information.
+    """
+    
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
     return {"final_answer": response.text}
 
 def route_email(state: GraphState) -> str:
@@ -297,27 +268,34 @@ app = graph.compile()
 # TEST
 
 if __name__ == "__main__":
-
     inputs = {
-
-    "sender_email": "cliente@email.com",
-    "body_email": "Gostaria de saber se vocês têm interesse em fechar uma parceria de vendas com a nossa distribuidora. Aguardo retorno do setor de vendas. ",
-    "destination_sector": None,
-    "final_answer": None
-    
+        # Testando com um e-mail que está na nossa lista VIP interna do nó enrich_data
+        "sender_email": "rodrigo_premium@email.com",
+        "body_email": "Estou há duas horas tentando acessar o painel financeiro e a página só dá erro 500! Quero meu estorno agora ou vou acionar o meu jurídico. Isso é inadmissível para o valor que eu pago!",
+        "destination_sector": None,
+        "urgency": None,
+        "sentiment": None,
+        "account_level": None,
+        "final_answer": None
     }
 
-    print("Iniciando teste Completo...")
+    print("🔥 Iniciando teste do Triador Inteligente Enterprise...")
 
     result = app.invoke(inputs)
 
-    print("\n--- RESULTADO FINAL DO ESTADO ---")
-    print("Setor Identificado:", result.get("destination_sector"))
-    print("\nResposta Gerada:\n", result.get("final_answer"))
+    print("\n--- 🏁 RELATÓRIO FINAL DO GRAFO ---")
+    print(f"📍 Setor Destino:   {result.get('destination_sector')}")
+    print(f"🔥 Nível de Urgência: {result.get('urgency')}")
+    print(f"🎭 Sentimento:       {result.get('sentiment')}")
+    print(f"💎 Nível de Conta:   {result.get('account_level')}")
+    
+    print("\n📧 Resposta Gerada Para Envio:\n")
+    print("-" * 60)
+    print(result.get("final_answer"))
+    print("-" * 60)
 
-    png_bytes = app.get_graph().draw_mermaid_png(
-                    draw_method=MermaidDrawMethod.API
-    )
-
+    # Atualiza a imagem do Grafo
+    png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
     with open("grafo_exemplo1.png", "wb") as f:
         f.write(png_bytes)
+    print("\n🖼️ Imagem do grafo atualizada com sucesso em 'grafo_exemplo1.png'!")
