@@ -16,7 +16,6 @@ function.zip
 
 # Avoid upload of -tfvars file containing secrets
 *.tfvars
-
 scripts/
 tests/
 
