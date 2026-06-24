@@ -262,12 +262,18 @@ graph.add_node("answer_support",
 graph.add_node("answer_commercial",
                answer_commercial)
 
+graph.add_node("enrich_data",
+               enrich_data)
+
 # Edges
 
 graph.set_entry_point("classify_email")
 
+graph.add_edge("classify_email",
+               "enrich_data")
+
 graph.add_conditional_edges(
-    "classify_email",
+    "enrich_data",
     route_email,
     {
         "answer_finance": "answer_finance",
