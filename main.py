@@ -29,17 +29,41 @@ class GraphState(TypedDict):
 
     final_answer: Optional[str]
 
-class EmailClassification(BaseModel):
-    sector: Literal["Finance", "Support", "Commercial"] = Field(
-        description=" The destination sector base on the email content "
-    )
+    sentiment: Optional[str]
 
+    urgency: Optional[str]
+
+    account_level: Optional[str]
+
+class EmailClassification(BaseModel):
+   
+    sector: Literal["Finance", "Support", "Commercial"] = Field(
+        description="O setor de destino com base no conteúdo do e-mail."
+    )
+    urgency: Literal["Low", "Medium", "High", "Critical"] = Field(
+        description="O nível de urgência do e-mail. 'Critical' deve ser usado apenas para ameaças de processo, fúria extrema ou falhas totais de sistema."
+    )
+    sentiment: Literal["Angry", "Neutral", "Satisfied"] = Field(
+        description="O estado emocional predominante do cliente no e-mail."
+    )
 # Node-1
 def classify_email(state: GraphState) -> dict:
 
     body_email = state["body_email"]
+    
+    urgency = state["urgency"]
 
-    prompt = f"Classifique o seguinte e-mail em um dos setores válidos: {body_email}"
+    sentiment = state["sentiment"]
+
+    account_level = state["account_level"]
+
+    prompt = f"""
+        Você é um Analista de Triagem de IA Avançado.
+        Sua tarefa é analisar o e-mail abaixo e extrair o setor responsável, o nível de urgência e o sentimento do cliente.
+        
+        E-mail do Cliente:
+        "{body_email}"
+        """
     
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -52,8 +76,9 @@ def classify_email(state: GraphState) -> dict:
     )
     
     extract_data = json.loads(response.text)
+    print(f"📊 [TRIAGEM CONCLUÍDA]: Setor -> {extract_data['sector']} | Urgência -> {extract_data['urgency']} | Sentimento -> {extract_data['sentiment']}")
 
-    return {"destination_sector": extract_data["sector"]}
+    return {"destination_sector": extract_data["sector"], "urgency": extract_data["urgency"], "sentiment": extract_data["sentiment"]}
 
 # Node-2
 def  answer_finance(state: GraphState) -> dict:

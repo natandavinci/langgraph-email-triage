@@ -17,13 +17,6 @@ function.zip
 # Avoid upload of -tfvars file containing secrets
 *.tfvars
 
-# Ignore any local trypcomdata folders
-trypcomdata/
-trypcomfunctions/
-trypcomclasses/
-trypcomproviders/
-trypcomstaticdata/
-
 scripts/
 tests/
 
