@@ -80,6 +80,27 @@ def classify_email(state: GraphState) -> dict:
 
     return {"destination_sector": extract_data["sector"], "urgency": extract_data["urgency"], "sentiment": extract_data["sentiment"]}
 
+#NeW NODE
+def enrich_data(state:GraphState) -> dict:
+    print("\n🗄️ [NÓ: ENRIQUECIMENTO]: Consultando banco de dados do cliente...")
+    email_cliente = state["sender_email"]
+   
+   # Simulação de uma tabela no Banco de Dados (E-mails cadastrados como VIP)
+    BANCO_DADOS_VIPS = [
+        "cliente_vip@email.com",
+        "rodrigo_premium@email.com",
+        "parceiro_comercial@neytans.com"
+    ]
+
+    if email_cliente in BANCO_DADOS_VIPS:
+        nivel = "VIP"
+
+    else:
+        nivel = "Free"
+
+    print(f"💎 [DADOS ENRIQUECIDOS]: Cliente carimbado como nível: {nivel}")
+
+    return {"account_level": nivel}
 # Node-2
 def  answer_finance(state: GraphState) -> dict:
 
