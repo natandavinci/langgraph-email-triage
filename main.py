@@ -280,13 +280,13 @@ def route_email(state: GraphState) -> str:
     sector = state["destination_sector"]
 
     if sector == "Finance":
-        return "answer_finance"
+        return "finance"
     
     elif sector == "Support":
-        return "answer_support"
+        return "support"
     
     elif sector == "Commercial":
-        return "answer_commercial"
+        return "commercial"
     
     else:
         print(f"⚠️ [ROTEADOR]: Setor detectado '{sector}' é inválido! Desviando para o Fallback.")
@@ -326,9 +326,9 @@ graph.add_conditional_edges(
     "enrich_data",
     route_email,
     {
-        "answer_finance": "answer_finance",
-        "answer_support": "answer_support",
-        "answer_commercial": "answer_commercial",
+        "finance": "answer_finance",
+        "support": "answer_support",
+        "commercial": "answer_commercial",
         "fallback": "answer_fallback"
     }
                              )
