@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 import json
 from langgraph.graph import StateGraph, END
 from langchain_core.runnables.graph import MermaidDrawMethod
+from langgraph.checkpoint.memory import MemorySaver
 
 load_dotenv()
 
@@ -34,6 +35,8 @@ class GraphState(TypedDict):
     urgency: Optional[str]
 
     account_level: Optional[str]
+
+    history: Optional[str]
 
 class EmailClassification(BaseModel):
    
@@ -99,7 +102,8 @@ def enrich_data(state:GraphState) -> dict:
 def  answer_finance(state: GraphState) -> dict:
 
     print("\n💰 [NÓ: RESPOSTA FINANCEIRO]: Gerando resposta estratégica...")
-    
+    historico_atual = state.get("history") or []
+    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
     # Criamos regras dinâmicas de acordo com o estado do cliente
     alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Cliente com fúria ou urgência crítica. Seja extremamente formal, peça desculpas pelo transtorno e dê garantias." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
     tratamento_vip = "⭐ CLIENTE VIP: Adicione ao final da assinatura o carimbo 'Atendimento Premium Neytans'." if state["account_level"] == "VIP" else ""
@@ -118,20 +122,29 @@ def  answer_finance(state: GraphState) -> dict:
     - Return only the message that should be sent to the customer.
     - Do not explain your reasoning, do not use markdown, and do not use headings.
 
+    # Interactions History (Past Conversations)
+    {texto_historico}
+
     # Context Data
     Sender email: {state["sender_email"]}
     Account Level: {state["account_level"]}
     Customer Sentiment: {state["sentiment"]}
     Urgency Level: {state["urgency"]}
 
-    # Customer Email
-    {state['body_email']}
+    # New Customer Email (Answer this one now)
+    "{state['body_email']}"
 
     Generate the customer reply now in email form using this information.
     """
-    
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    return {"final_answer": response.text}
+    
+    response_ia = response.text
+
+    historico_atual.append(f"Cliente: {state['body_email']}")
+    historico_atual.append(f"Suporte: {response_ia}")
+    
+    return {"final_answer": response_ia,
+            "history": historico_atual}
 
 
 
@@ -139,6 +152,9 @@ def  answer_finance(state: GraphState) -> dict:
 def answer_support(state: GraphState) -> dict:
 
     print("\n🛠️ [NÓ: RESPOSTA SUPORTE]: Gerando resposta técnica...")
+
+    historico_atual = state.get("history") or []
+    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
     
     alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Falha crítica de sistema ou cliente irritado. Ofereça uma solução imediata ou escalonamento imediato para engenharia." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
     tratamento_vip = "⭐ CLIENTE VIP: Ofereça a opção de agendar uma chamada de suporte dedicada de 15 minutos." if state["account_level"] == "VIP" else ""
@@ -156,24 +172,37 @@ def answer_support(state: GraphState) -> dict:
     - Return only the message that should be sent to the customer.
     - Do not explain your reasoning, do not use markdown, and do not use headings.
 
+    # Interactions History (Past Conversations)
+    {texto_historico}
+
     # Context Data
     Sender email: {state["sender_email"]}
     Account Level: {state["account_level"]}
     Customer Sentiment: {state["sentiment"]}
     Urgency Level: {state["urgency"]}
 
-    # Customer Email
-    {state['body_email']}
+    # New Customer Email (Answer this one now)
+    "{state['body_email']}"
 
     Generate the customer reply now in email form using this information.
     """
     
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    return {"final_answer": response.text}
+    
+    response_ia = response.text
+
+    historico_atual.append(f"Cliente: {state['body_email']}")
+    historico_atual.append(f"Suporte: {response_ia}")
+    
+    return {"final_answer": response_ia,
+            "history": historico_atual}
 
 # Node-4
 def answer_commercial(state:GraphState) -> dict:
     print("\n🤝 [NÓ: RESPOSTA COMERCIAL]: Gerando proposta/retorno de negócios...")
+
+    historico_atual = state.get("history") or []
+    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
     
     # Tratamento focado em conversão e retenção de parceiros de alto valor
     tratamento_vip = "⭐ LEAD VIP: Trate como potencial parceiro estratégico nível Gold. Use tom altamente persuasivo." if state["account_level"] == "VIP" else ""
@@ -191,18 +220,30 @@ def answer_commercial(state:GraphState) -> dict:
     - Return only the message that should be sent to the customer.
     - Do not explain your reasoning, do not use markdown, and do not use headings.
 
+     # Interactions History (Past Conversations)
+    {texto_historico}
+
     # Context Data
     Sender email: {state["sender_email"]}
     Account Level: {state["account_level"]}
+    Customer Sentiment: {state["sentiment"]}
+    Urgency Level: {state["urgency"]}
 
-    # Customer Email
-    {state['body_email']}
+    # New Customer Email (Answer this one now)
+    "{state['body_email']}"
 
     Generate the customer reply now in email form using this information.
     """
     
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    return {"final_answer": response.text}
+    
+    response_ia = response.text
+
+    historico_atual.append(f"Cliente: {state['body_email']}")
+    historico_atual.append(f"Suporte: {response_ia}")
+    
+    return {"final_answer": response_ia,
+            "history": historico_atual}
 
 def route_email(state: GraphState) -> str:
     sector = state["destination_sector"]
@@ -262,40 +303,40 @@ graph.add_edge("answer_support",
 graph.add_edge("answer_commercial",
                END)
 
-app = graph.compile()
+memory = MemorySaver()
+
+app = graph.compile(checkpointer=memory)
 
 
 # TEST
 
 if __name__ == "__main__":
-    inputs = {
-        # Testando com um e-mail que está na nossa lista VIP interna do nó enrich_data
+    # A configuração que define qual gaveta do banco de dados estamos acessando
+    config = {"configurable": {"thread_id": "chamado_cliente_123"}}
+
+    # --- E-MAIL 1 (O início do problema) ---
+    email_1 = {
         "sender_email": "rodrigo_premium@email.com",
-        "body_email": "Estou há duas horas tentando acessar o painel financeiro e a página só dá erro 500! Quero meu estorno agora ou vou acionar o meu jurídico. Isso é inadmissível para o valor que eu pago!",
-        "destination_sector": None,
-        "urgency": None,
-        "sentiment": None,
-        "account_level": None,
-        "final_answer": None
+        "body_email": "Olá, meu painel de controle está dando tela em branco no navegador Chrome.",
+        "destination_sector": None, "urgency": None, "sentiment": None, "account_level": None, "history": [], "final_answer": None
     }
 
-    print("🔥 Iniciando teste do Triador Inteligente Enterprise...")
+    print("📬 Rodando o Primeiro Atendimento...")
+    resultado_1 = app.invoke(email_1, config=config)
+    print(f"Resposta 1:\n{resultado_1['final_answer']}\n")
 
-    result = app.invoke(inputs)
+    print("="*60)
 
-    print("\n--- 🏁 RELATÓRIO FINAL DO GRAFO ---")
-    print(f"📍 Setor Destino:   {result.get('destination_sector')}")
-    print(f"🔥 Nível de Urgência: {result.get('urgency')}")
-    print(f"🎭 Sentimento:       {result.get('sentiment')}")
-    print(f"💎 Nível de Conta:   {result.get('account_level')}")
-    
-    print("\n📧 Resposta Gerada Para Envio:\n")
-    print("-" * 60)
-    print(result.get("final_answer"))
-    print("-" * 60)
+    # --- E-MAIL 2 (O cliente respondendo de volta na mesma thread) ---
+    email_2 = {
+        "sender_email": "rodrigo_premium@email.com",
+        "body_email": "Eu limpei o cache como você sugeriu mas o erro continua, o que eu faço agora?",
+        # Passamos os campos vazios porque o LangGraph vai puxar o passado do banco através do config
+        "destination_sector": None, "urgency": None, "sentiment": None, "account_level": None, "history": None, "final_answer": None
+    }
 
-    # Atualiza a imagem do Grafo
-    png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
-    with open("grafo_exemplo1.png", "wb") as f:
-        f.write(png_bytes)
-    print("\n🖼️ Imagem do grafo atualizada com sucesso em 'grafo_exemplo1.png'!")
+    print("📬 Rodando o Segundo Atendimento (Lembrando do Passado)...")
+    resultado_2 = app.invoke(email_2, config=config)
+    print(f"Resposta 2:\n{resultado_2['final_answer']}\n")
+
+
