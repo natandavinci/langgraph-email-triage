@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 import json
 from langgraph.graph import StateGraph, END
 from langchain_core.runnables.graph import MermaidDrawMethod
-from langgraph.checkpoint.memory import 
+from langgraph.checkpoint.memory import MemorySaver
 import smtplib
 import imaplib
 import email
@@ -358,6 +358,8 @@ graph.add_node("enrich_data",
 graph.add_node("answer_fallback",
                answer_fallback)
 
+graph.add_node("send_email_node",send_email_node)
+
 # Edges
 
 graph.set_entry_point("classify_email")
@@ -377,15 +379,18 @@ graph.add_conditional_edges(
                              )
 
 graph.add_edge("answer_finance",
-               END)
+               "send_email_node")
 
 graph.add_edge("answer_support",
-               END)
+               "send_email_node")
 
 graph.add_edge("answer_commercial",
-               END)
+               "send_email_node")
 
 graph.add_edge("answer_fallback",
+               "send_email_node")
+
+graph.add_edge("send_email_node",
                END)
 
 memory = MemorySaver()
