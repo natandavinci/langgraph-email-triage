@@ -354,6 +354,8 @@ def process_inbound_emails():
                 else:
                     sender_email = from_.strip()
 
+                sender_email = sender_email.strip().lower()
+
                 body_email = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -367,7 +369,9 @@ def process_inbound_emails():
                 print(f"📄 Conteúdo Lido:\n{body_email.strip()}")
                 print("-" * 40)
 
-                config = {"configurable": {"thread_id": f"customer_{sender_email}"}}
+
+                thread_clean = sender_email.replace("@", "_").replace(".", "_")
+                config = {"configurable": {"thread_id": f"th_{thread_clean}"}}
                 
                 inputs = {
                     "sender_email": sender_email,
@@ -474,3 +478,8 @@ app = graph.compile(checkpointer=memory)
 # TEST
 if __name__ == "__main__":
     process_inbound_emails()
+
+    png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
+    with open("grafo_exemplo1.png", "wb") as f:
+        f.write(png_bytes)
+    print("\n🖼️ Imagem do grafo atualizada com sucesso em 'grafo_exemplo1.png'!")
