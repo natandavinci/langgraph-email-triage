@@ -317,6 +317,79 @@ def send_email_node(state: GraphState) -> dict:
 
     return {}
 
+# Ler a caixa de entrada
+def process_inbound_emails():
+    print("\n📥 [SISTEMA]: Verificando novos e-mails não lidos no Gmail...")
+
+    meu_email = os.getenv("EMAIL_ACCOUNT")
+    minha_senha = os.getenv("EMAIL_PASSWORD")
+
+    try:
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(meu_email, minha_senha)
+        mail.select("inbox")
+
+        status, messages = mail.search(None, "UNSEEN")
+        email_ids = messages[0].split()
+
+        if not email_ids:
+            print("📭 Caixa limpa! Nenhum e-mail novo encontrado.")
+            return
+        print(f"📩 {len(email_ids)} novo(s) e-mail(s) detectado(s). Processando o mais recente...")
+
+        latest_email_id = email_ids[-1]
+        status,data, = mail.fetch(latest_email_id, "(RFC822)")
+
+        for response_part in data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+
+                from_, encoding = decode_header(msg["From"])[0]
+
+                if isinstance(from_, bytes):
+                    from_ = from_.decode(encoding or "utf-8")
+
+                if "<" in from_:
+                    sender_email = from_.split("<")[1].replace(">", "").strip()
+                else:
+                    sender_email = from_.strip()
+
+                body_email = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            body_email = part.get_payload(decode=True).decode("utf-8")
+                            break
+                else:
+                    body_email = msg.get_payload(decode=True).decode("utf-8")
+
+                print(f"📨 Remetente: {sender_email}")
+                print(f"📄 Conteúdo Lido:\n{body_email.strip()}")
+                print("-" * 40)
+
+                config = {"configurable": {"thread_id": f"customer_{sender_email}"}}
+                
+                inputs = {
+                    "sender_email": sender_email,
+                    "body_email": body_email.strip(),
+                    "destination_sector": None,
+                    "urgency": None,
+                    "sentiment": None,
+                    "account_level": None,
+                    "history": [],
+                    "final_answer": None
+                }
+
+                print("🧠 [LANGGRAPH]: Iniciando processamento do Grafo...")
+                app.invoke(inputs, config=config)
+
+        mail.close()
+        mail.logout()
+
+    except Exception as e:
+        print(f"❌ [ERRO IMAP]: Falha ao ler a caixa de entrada: {e}")
+                
+
 
 # ROUTE FUNCTION
 def route_email(state: GraphState) -> str:
@@ -399,50 +472,5 @@ app = graph.compile(checkpointer=memory)
 
 
 # TEST
-
 if __name__ == "__main__":
-   # Criamos a configuração da Thread
-    config = {"configurable": {"thread_id": "teste_resiliencia_999"}}
-
-    # --- CENÁRIO DE INCÊNDIO: Forçando uma falha de Roteamento ---
-    # Imagine que por algum motivo o estado foi corrompido ou a IA viajou e carimbou "Recursos_Humanos"
-    email_com_erro = {
-        "sender_email": "usuario@email.com",
-        # Um texto completamente aleatório e confuso que não pertence a nenhum setor
-        "body_email": "xyz123999 dasdaaslkjdas dsa;ldkas;l dsa d;sa lkd;sa kdas;lkd;sa kda",
-        "destination_sector": None, 
-        "urgency": None,
-        "sentiment": None,
-        "account_level": None,
-        "history": [],
-        "final_answer": None
-    }
-
-    print("🔥 DISPARANDO TESTE DE ESTRESSE (SETOR INVÁLIDO)...")
-    
-    # O grafo deve rodar, passar pelo enrich_data, cair na aresta, perceber o erro e desviar para o Fallback
-    resultado_seguro = app.invoke(email_com_erro, config=config)
-
-    print("\n--- 🏁 RELATÓRIO DE CONTINGÊNCIA ---")
-    print(f"📍 Setor Ajustado no Fallback: {resultado_seguro.get('destination_sector')}")
-    print(f"🎭 Sentimento Original:        {resultado_seguro.get('sentiment')}")
-    
-    print("\n📧 Resposta de Emergência Gerada:\n")
-    print("-" * 60)
-    print(resultado_seguro.get("final_answer"))
-    print("-" * 60)
-
-
-
-
-
-    png_bytes = app.get_graph().draw_mermaid_png(
-                    draw_method=MermaidDrawMethod.API
-    )
-
-    with open("grafo_exemplo1.png", "wb") as f:
-        f.write(png_bytes)
-
-
-
-
+    process_inbound_emails()
