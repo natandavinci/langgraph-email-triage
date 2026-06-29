@@ -10,7 +10,14 @@ from pydantic import BaseModel, Field
 import json
 from langgraph.graph import StateGraph, END
 from langchain_core.runnables.graph import MermaidDrawMethod
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.memory import 
+import smtplib
+import imaplib
+import email
+from email.header import decode_header
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 
 load_dotenv()
 
@@ -276,6 +283,42 @@ def answer_commercial(state:GraphState) -> dict:
     return {"final_answer": response_ia,
             "history": historico_atual}
 
+
+# Send email - new node
+def send_email_node(state: GraphState) -> dict:
+    print("\n📧 [NÓ: ENVIO DE E-MAIL]: Preparando disparo via SMTP...")
+
+    if not state.get("final_answer"):
+        print("⚠️ [ENVIO]: Nenhuma resposta gerada no estado. Abortando envio automático.")
+        return {}
+    
+    meu_email = os.getenv("EMAIL_ACCOUNT")
+    minha_senha = os.getenv("EMAIL_PASSWORD")
+    email_cliente = state["sender_email"]
+
+    msg = MIMEMultipart()
+    msg['From'] = meu_email
+    msg['To'] = email_cliente
+    msg['Subject'] = f"Re: Atendimento Neytans - Setor {state.get('destination_sector', 'Suporte')}"
+
+    msg.attach(MIMEText(state["final_answer"], 'plain'))
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(meu_email, minha_senha)
+
+        server.sendmail(meu_email, email_cliente, msg.as_string())
+        server.quit()
+
+        print(f"✅ [ENVIO CONCLUÍDO]: E-mail enviado com sucesso para {email_cliente}!")
+    except Exception as e:
+        print(f"❌ [ERRO NO ENVIO]: Falha ao disparar e-mail via SMTP: {e}")
+
+    return {}
+
+
+# ROUTE FUNCTION
 def route_email(state: GraphState) -> str:
     sector = state["destination_sector"]
 
