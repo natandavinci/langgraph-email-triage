@@ -8,7 +8,7 @@ class BaseAgent:
     Centraliza a leitura de políticas e a formatação do histórico de conversas.
     """
 
-    def __init(self, policy_filename: str):
+    def __init__(self, policy_filename: str):
         self.policy_path = os.path.join("data", policy_filename)
 
     def _load_policy(self) -> str:

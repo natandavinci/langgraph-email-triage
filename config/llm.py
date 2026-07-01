@@ -1,4 +1,4 @@
-from config import gemini_client, MODEL_NAME
+from config.settings import gemini_client, MODEL_NAME
 
 def call_llm(prompt: str) -> str:
     """
