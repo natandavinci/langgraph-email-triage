@@ -1,100 +1,87 @@
-﻿# 🤖 AI-Powered Smart Email Router Agent
+﻿# 🤖 Ardael AI-Powered Smart Email Router Agent & Worker
 
-A robust, multi-node AI agent built with **LangGraph** and the official **Google GenAI SDK** that automatically classifies incoming customer emails and routes them to specialized sector nodes (Finance, Support, Commercial) to generate personalized, context-aware auto-responses.
+A robust, enterprise-grade multi-node AI agent and worker built with **LangGraph** and the official **Google GenAI SDK**. The system automatically intercepts incoming customer emails from a real mailbox, extracts structured metadata, classifies intent, and routes execution to specialized Object-Oriented specialized agents (Finance, Support, Commercial) that consume localized knowledge bases to reply to customers with context-aware auto-responses.
 
-This project was built to master the foundational concepts of state management, conditional routing, and structured LLM outputs using graph-based architectures.
+This project evolved from a prototype script into a production-oriented, stateful architecture implementing advanced patterns for AI Orchestration, persistence, and secure email infrastructure.
 
 ---
 
 ## 🏗️ Architecture Overview
 
-The agent is designed as a stateful graph where each node represents a specific software action and the transitions are governed by conditional edges based on the LLM's classification.
+The core engine is a stateful graph where each node acts as a sandboxed operation, and transitions are governed by conditional edges based on the triage layer's structured analysis.
 
 <p align="center">
   <img src="assets/grafo_exemplo1.png" alt="Smart Email Router Graph" width="900">
 </p>
 
-### Key Concepts
+### Advanced Engineering Concepts Implemented
 
-* **State Management:** Uses a `TypedDict` (`GraphState`) to track the sender's email, the body text, the identified destination sector, and the final generated response across the pipeline.
-* **Structured Output:** Forces the `gemini-2.5-flash` model to return a strict Pydantic schema using `response_schema` and `Literal` typing, eliminating raw text parsing vulnerabilities.
-* **Conditional Routing:** A dynamic routing function evaluates the state's classification and dispatches execution to the correct answering node through LangGraph's conditional edges.
+* **Stateful Memory & Persistence:** Integrated with `SqliteSaver`, amarrando o histórico de conversas do cliente através de uma `thread_id` dinâmica baseada no hash MD5 do remetente (`sender_email`). O uso de `Annotated[list, add_messages]` garante o acúmulo infinito de contexto sem sobrescrever dados.
+* **Object-Oriented Agent Design (POO):** Cada setor especializado (Suporte, Financeiro, Comercial) foi encapsulado em classes independentes. Elas injetam dinamicamente manuais operacionais escritos em Markdown diretamente no System Prompt da LLM.
+* **Structured Output Triaging:** O nó de roteamento força o modelo `gemini-1.5-flash` a obedecer a um esquema estrito do Pydantic (`EmailClassification`), mitigando falhas de parsing comuns em saídas de texto brutas.
+* **Real Outbound/Inbound Infrastructure:** Módulos isolados de infraestrutura para comunicação externa via protocolos industriais padrão: **IMAP** para varredura e extração limpa de e-mails não lidos, e **SMTP (SSL)** para envio automatizado de respostas técnicas de volta para a internet.
 
 ---
 
 ## 🛠️ Tech Stack
 
 * **Runtime/Language:** Python 3.12+
-* **Agent Framework:** LangGraph
-* **LLM Provider:** Google Gemini API (`gemini-2.5-flash`)
-* **SDK:** `google-genai`
+* **Agent Framework:** LangGraph (StateGraph & Pregel Engine)
+* **LLM Provider:** Google Gemini API (`gemini-1.5-flash`)
+* **Persistence Layer:** SQLite via `SqliteSaver`
+* **Protocols/Infra:** IMAPLib & SMTPLib (Python Native Standard)
 * **Data Validation:** Pydantic v2
-* **Package Manager:** `uv`
+* **Dependency Management:** `python-dotenv` & standard tools
 
 ---
+🚀 Getting Started
 
-## 🚀 Getting Started
+Prerequisites
 
-### Prerequisites
+Certifique-se de possuir o ambiente virtual configurado e ativo (Python 3.12+).
 
-Make sure you have `uv` installed on your machine:
+Clone the Repository
 
-```bash
-pip install uv
-```
-
-### Clone the Repository
-
-```bash
-git clone https://github.com/your-username/langgraph-email-triage.git
+git clone [https://github.com/natandavinci/langgraph-email-triage.git](https://github.com/natandavinci/langgraph-email-triage.git)
 cd langgraph-email-triage
-```
 
-### Install Dependencies
 
-```bash
-uv pip install langgraph google-genai pydantic python-dotenv
-```
+Install Dependencies
 
-### Configure Environment Variables
+pip install langgraph google-genai pydantic python-dotenv
 
-Create a `.env` file in the project root:
 
-```env
-GOOGLE_API_KEY=your_actual_api_key_here
-```
+Configure Environment Variables
 
-### Run the Project
+Crie um arquivo .env na raiz absoluta do projeto contendo as suas chaves e credenciais de e-mail (para contas Gmail, utilize uma Senha de App gerada nas configurações de segurança do Google):
 
-```bash
-uv run main.py
-```
+GEMINI_API_KEY=sua_chave_gemini_aqui
 
----
+# Configurações do Provedor de E-mail (IMAP/SMTP)
+EMAIL_USER=seu_email_operacional@gmail.com
+EMAIL_PASSWORD=sua_senha_de_aplicativo_aqui
 
-## 📖 Lessons Learned
 
-### 1. Avoiding Module Shadowing
+📖 Key Lessons & Refactorings
 
-Solved Python naming conflicts by avoiding filenames that collide with standard library modules (for example, `email.py`). Such conflicts can break dependencies that rely on internal imports, including libraries like `httpx` and `urllib`.
+1. O Mistério da Amnésia do Grafo (add_messages)
 
-### 2. Understanding LangGraph Routing
+Refatorado o comportamento da chave history dentro do GraphState. Sem o decorator Annotated acoplado ao reducer add_messages, o ecossistema LangGraph opera de forma stateless, limpando memórias passadas. A implementação correta permitiu ao banco SQLite guardar e fornecer a linha do tempo exata de e-mails para cada cliente de forma isolada.
 
-Mastered LangGraph's conditional routing system by ensuring that conditional edges map classifier outputs to registered node names instead of raw Python function objects.
+2. Blindagem de Assinaturas de Métodos Condicionais
 
-### 3. Testing Components in Isolation
+Ajustado o método de decisão condicional do roteador (route_decision) utilizando propriedades @staticmethod e capturando ponteiros ocultos do compilador através de *args e kwargs. Isso sanou o erro de conflito de argumentos injetados pelo motor Pregel do LangGraph.
 
-Validated individual graph nodes independently by mocking the `GraphState` object before integrating them into the full orchestration pipeline. This approach significantly simplified debugging and accelerated development.
+3. Encapsulamento de Nós via Funções lambda
 
----
+Evitou-se o conflito de assinaturas internas de métodos homônimos (como .answer()) de instâncias distintas mapeadas no Grafo, utilizando clausuras lambda explícitas durante o registro em graph.add_node(), estabilizando a validação de nós de destino nas arestas condicionais.
 
-## 🎯 Project Goals
+🎯 Project Goals Achieved
 
-This project was developed to gain hands-on experience with:
+Workflows de IA altamente determinísticos: Implementação prática e controle total de fluxo utilizando grafos de estado estruturados.
 
-* Stateful AI workflows
-* Graph-based agent orchestration
-* Structured LLM outputs
-* Conditional execution paths
-* Production-oriented agent design patterns
-* Google GenAI SDK integration
+Engenharia de Software de nível corporativo: Padrões sólidos de produção com Programação Orientada a Objetos aplicada a Agentes.
+
+RAG Local e Tomada de Ação: Consumo inteligente de manuais operacionais locais (.md) acoplados diretamente às respostas dos agentes especialistas.
+
+Infraestrutura ponta a ponta real: Conexão direta e funcional com a rede de e-mails mundial utilizando protocolos industriais padrão (IMAP e SMTP).
