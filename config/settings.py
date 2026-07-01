@@ -12,3 +12,12 @@ gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
 MODEL_NAME = "gemini-2.5-flash"
 
 DB_CONNECTION_STRING = "memoria_grafo.db"
+
+# === Configurações de E-mail (IMAP / SMTP) ===
+EMAIL_ACCOUNT = os.getenv("EMAIL_ACCOUNT")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+# Padrão para Gmail (se usar outro provedor, altere os hosts correspondentes)
+IMAP_SERVER = "imap.gmail.com"
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 465  # Porta padrão para SSL
