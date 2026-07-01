@@ -36,7 +36,7 @@ The core engine is a stateful graph where each node acts as a sandboxed operatio
 ---
 ## 🚀 Getting Started
 
-* **Prerequisites**
+**Prerequisites**
 
 Certifique-se de possuir o ambiente virtual configurado e ativo (Python 3.12+).
 
@@ -62,17 +62,17 @@ EMAIL_USER=seu_email_operacional@gmail.com
 EMAIL_PASSWORD=sua_senha_de_aplicativo_aqui
 
 
-📖 Key Lessons & Refactorings
+### 📖 Key Lessons & Refactorings
 
-* 1. O Mistério da Amnésia do Grafo (add_messages)
+**1. O Mistério da Amnésia do Grafo (add_messages)**
 
 Refatorado o comportamento da chave history dentro do GraphState. Sem o decorator Annotated acoplado ao reducer add_messages, o ecossistema LangGraph opera de forma stateless, limpando memórias passadas. A implementação correta permitiu ao banco SQLite guardar e fornecer a linha do tempo exata de e-mails para cada cliente de forma isolada.
 
-* 2. Blindagem de Assinaturas de Métodos Condicionais
+**2. Blindagem de Assinaturas de Métodos Condicionais**
 
 Ajustado o método de decisão condicional do roteador (route_decision) utilizando propriedades @staticmethod e capturando ponteiros ocultos do compilador através de *args e kwargs. Isso sanou o erro de conflito de argumentos injetados pelo motor Pregel do LangGraph.
 
-* 3. Encapsulamento de Nós via Funções lambda
+**3. Encapsulamento de Nós via Funções lambda**
 
 Evitou-se o conflito de assinaturas internas de métodos homônimos (como .answer()) de instâncias distintas mapeadas no Grafo, utilizando clausuras lambda explícitas durante o registro em graph.add_node(), estabilizando a validação de nós de destino nas arestas condicionais.
 
