@@ -3,7 +3,8 @@ memoria_grafo.db
 memoria_grafo.db-wal
 memoria_grafo.db-shm
 *.db
-*.sqlite
+*.
+data/
 
 # === Ambientes Virtuais (Python Venv) ===
 .venv/
