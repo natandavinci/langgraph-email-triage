@@ -1,0 +1,12 @@
+[project]
+name = "langgraph-emails"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai>=2.8.0",
+    "langgraph>=1.2.5",
+    "langgraph-checkpoint-sqlite>=3.1.0",
+    "python-dotenv>=1.2.2",
+]

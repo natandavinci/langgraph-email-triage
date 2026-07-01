@@ -1,34 +1,35 @@
-# Ignore the local .terraform state
-.terraform/
+# === Banco de Dados Local (LangGraph Checkpoints) ===
+memoria_grafo.db
+memoria_grafo.db-wal
+memoria_grafo.db-shm
+*.db
+*.sqlite
 
-# Ignore pycache
-__pycache__/
-
-# Ignore local package files
-*.egg-info
-
-# Ignore .idea directory
-.idea/
-
-# Avoid accidental uploads of intermediate lambda.zip files
-lambda.zip
-function.zip
-
-# Avoid upload of -tfvars file containing secrets
-*.tfvars
-scripts/
-tests/
-
-dev/
-venv/
-build/
-.idea/
-.env
-.env.dev
-
-# uv (dev only)
+# === Ambientes Virtuais (Python Venv) ===
 .venv/
-.uv/
-uv.lock
-.python-version
-pyproject.toml
+venv/
+ENV/
+env/
+python/
+
+# === Arquivos de Configuração e Chaves (Segurança!) ===
+.env
+.env.local
+.env.secret
+chaves.json
+
+# === Caches do Python e do Sistema ===
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# === Arquivos do Sistema Operacional ===
+.DS_Store
+Thumbs.db
+
+# === Logs e Imagens de Teste ===
+*.log
+# Se você não quiser subir as imagens geradas pelo draw_mermaid_png:
+# *.png
