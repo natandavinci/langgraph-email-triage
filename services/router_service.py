@@ -50,12 +50,13 @@ class RouterService:
                 "account_level": "Free"
             }
         
-    def route_decision(state: GraphState) -> str:
+    @staticmethod
+    def route_decision(state: GraphState, *args, **kwargs) -> str:
         """
         Função de decisão condicional do LangGraph.
-        Avalia o campo destination_sector do estado e dita para qual nó o fluxo deve ir.
+        O uso de *args e **kwargs garante compatibilidade com os parâmetros 
+        internos de configuração que o LangGraph injeta na chamada.
         """
-
         sector = state.get("destination_sector")
         if sector == "Support":
             return "support_node"

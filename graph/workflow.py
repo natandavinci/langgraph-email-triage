@@ -20,28 +20,28 @@ def create_email_workflow() -> StateGraph:
 
     graph  = StateGraph(GraphState)
 
-    graph.add_node("triage", router.triage)
-    graph.add_node("finance", finance.answer)
-    graph.add_node("support", support.answer)
-    graph.add_node("commercial", commercial.answer)
-    graph.add_node("fallback", fallback.answer)
+    graph.add_node("triage_node", router.triage)
+    graph.add_node("finance_node", finance.answer)
+    graph.add_node("support_node", support.answer)
+    graph.add_node("commercial_node", commercial.answer)
+    graph.add_node("fallback_node", fallback.answer)
 
-    graph.add_edge(START, "triage")
+    graph.add_edge(START, "triage_node")
 
     graph.add_conditional_edges(
-        "triage",
+        "triage_node",
         router.route_decision,
         {
-            "finance": "finance",
-            "support": "support",
-            "commercial": "commercial",
-            "fallback": "fallback"
+            "finance_node": "finance_node",
+            "support_node": "support_node",
+            "commercial_node": "commercial_node",
+            "fallback_node": "fallback_node"
         }
     )
 
-    graph.add_edge("finance", END)
-    graph.add_edge("support", END)
-    graph.add_edge("commercial", END)
-    graph.add_edge("fallback", END)
+    graph.add_edge("finance_node", END)
+    graph.add_edge("support_node", END)
+    graph.add_edge("commercial_node", END)
+    graph.add_edge("fallback_node", END)
 
     return graph
