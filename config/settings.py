@@ -9,5 +9,6 @@ if not GEMINI_API_KEY:
     raise ValueError("❌ [ERRO]: A variável GEMINI_API_KEY não foi encontrada no arquivo .env")
 
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.5-flash"
 
 DB_CONNECTION_STRING = "memoria_grafo.db"
