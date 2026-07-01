@@ -1,6 +1,8 @@
 from typing import (
     Optional,
-    Literal)
+    Literal,
+    Annotated
+)
 from typing_extensions import TypedDict
 from google import genai
 from google.genai import types
@@ -9,14 +11,17 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 import json
 from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
 from langchain_core.runnables.graph import MermaidDrawMethod
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 import smtplib
 import imaplib
 import email
 from email.header import decode_header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from langchain_core.messages import HumanMessage, AIMessage
+import operator
 
 
 load_dotenv()
@@ -43,7 +48,7 @@ class GraphState(TypedDict):
 
     account_level: Optional[str]
 
-    history: Optional[str]
+    history: Annotated[list, add_messages]
 
 class EmailClassification(BaseModel):
    
@@ -107,9 +112,21 @@ def enrich_data(state:GraphState) -> dict:
     return {"account_level": nivel}
 
 # New function
-def answer_fallback(state:GraphState) -> dict:
+def answer_fallback(state: GraphState) -> dict:
     print("\n🚨 [NÓ: FALLBACK]: Setor inválido ou falha de triagem. Gerando resposta de segurança...")
     
+    historico_mensagens = state.get("history") or []
+    texto_historico = ""
+    for msg in historico_mensagens:
+        if isinstance(msg, HumanMessage):
+            origem = "Cliente"
+        else:
+            origem = "Suporte"
+        texto_historico += f"{origem}: {msg.content}\n"
+    
+    if not texto_historico:
+        texto_historico = "Nenhuma interação anterior."
+
     prompt = f"""
     You are Natanzinho_Specialist, a senior customer relations coordinator at Neytans.
     We had a minor internal routing delay with your ticket, so I am taking over personally.
@@ -122,26 +139,45 @@ def answer_fallback(state:GraphState) -> dict:
     - Be extremely polite, professional, and reassuring.
     - Do not use markdown or headings.
     
+    # Interactions History (Past Conversations)
+    {texto_historico}
+    
     # Customer Email
     "{state['body_email']}"
     """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+    response_ia = response.text
 
-    return {"final_answer": response.text, "destination_sector": "Human_Contigency"}
-
-
+    return {
+        "final_answer": response_ia, 
+        "destination_sector": "Human_Contigency",
+        "history": [
+            HumanMessage(content=state['body_email']),
+            AIMessage(content=response_ia)
+        ]
+    }
 
 
 # Node-2
-def  answer_finance(state: GraphState) -> dict:
-
+def answer_finance(state: GraphState) -> dict:
     print("\n💰 [NÓ: RESPOSTA FINANCEIRO]: Gerando resposta estratégica...")
-    historico_atual = state.get("history") or []
-    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
+    historico_mensagens = state.get("history") or []
+
+    texto_historico = ""
+    for msg in historico_mensagens:
+        # 🚨 CORREÇÃO PROFISSIONAL: Verifica o tipo real da classe LangChain
+        if isinstance(msg, HumanMessage):
+            origem = "Cliente"
+        else:
+            origem = "Suporte"
+            
+        # Acessa o conteúdo do objeto usando .content (e não .get())
+        texto_historico += f"{origem}: {msg.content}\n"
+    
+    if not texto_historico:
+        texto_historico = "Nenhuma interação anterior."
+
     # Criamos regras dinâmicas de acordo com o estado do cliente
     alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Cliente com fúria ou urgência crítica. Seja extremamente formal, peça desculpas pelo transtorno e dê garantias." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
     tratamento_vip = "⭐ CLIENTE VIP: Adicione ao final da assinatura o carimbo 'Atendimento Premium Neytans'." if state["account_level"] == "VIP" else ""
@@ -175,24 +211,34 @@ def  answer_finance(state: GraphState) -> dict:
     Generate the customer reply now in email form using this information.
     """
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    
     response_ia = response.text
 
-    historico_atual.append(f"Cliente: {state['body_email']}")
-    historico_atual.append(f"Suporte: {response_ia}")
-    
-    return {"final_answer": response_ia,
-            "history": historico_atual}
+    # 🚨 RETORNO PADRÃO DE MERCADO: Devolvemos os objetos limpos na lista
+    return {
+        "final_answer": response_ia,
+        "history": [
+            HumanMessage(content=state['body_email']),
+            AIMessage(content=response_ia)
+        ]
+    }
 
 
 
 # Node-3
 def answer_support(state: GraphState) -> dict:
-
     print("\n🛠️ [NÓ: RESPOSTA SUPORTE]: Gerando resposta técnica...")
 
-    historico_atual = state.get("history") or []
-    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
+    historico_mensagens = state.get("history") or []
+    texto_historico = ""
+    for msg in historico_mensagens:
+        if isinstance(msg, HumanMessage):
+            origem = "Cliente"
+        else:
+            origem = "Suporte"
+        texto_historico += f"{origem}: {msg.content}\n"
+    
+    if not texto_historico:
+        texto_historico = "Nenhuma interação anterior."
     
     alerta_prioridade = "🚨 PRIORIDADE MÁXIMA: Falha crítica de sistema ou cliente irritado. Ofereça uma solução imediata ou escalonamento imediato para engenharia." if state["sentiment"] == "Angry" or state["urgency"] == "Critical" else ""
     tratamento_vip = "⭐ CLIENTE VIP: Ofereça a opção de agendar uma chamada de suporte dedicada de 15 minutos." if state["account_level"] == "VIP" else ""
@@ -226,23 +272,32 @@ def answer_support(state: GraphState) -> dict:
     """
     
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    
     response_ia = response.text
 
-    historico_atual.append(f"Cliente: {state['body_email']}")
-    historico_atual.append(f"Suporte: {response_ia}")
-    
-    return {"final_answer": response_ia,
-            "history": historico_atual}
+    return {
+        "final_answer": response_ia,
+        "history": [
+            HumanMessage(content=state['body_email']),
+            AIMessage(content=response_ia)
+        ]
+    }
 
 # Node-4
-def answer_commercial(state:GraphState) -> dict:
+def answer_commercial(state: GraphState) -> dict:
     print("\n🤝 [NÓ: RESPOSTA COMERCIAL]: Gerando proposta/retorno de negócios...")
 
-    historico_atual = state.get("history") or []
-    texto_historico = "\n".join(historico_atual) if historico_atual else "Nenhuma interação anterior."
+    historico_mensagens = state.get("history") or []
+    texto_historico = ""
+    for msg in historico_mensagens:
+        if isinstance(msg, HumanMessage):
+            origem = "Cliente"
+        else:
+            origem = "Suporte"
+        texto_historico += f"{origem}: {msg.content}\n"
     
-    # Tratamento focado em conversão e retenção de parceiros de alto valor
+    if not texto_historico:
+        texto_historico = "Nenhuma interação anterior."
+    
     tratamento_vip = "⭐ LEAD VIP: Trate como potencial parceiro estratégico nível Gold. Use tom altamente persuasivo." if state["account_level"] == "VIP" else ""
 
     prompt = f"""
@@ -258,7 +313,7 @@ def answer_commercial(state:GraphState) -> dict:
     - Return only the message that should be sent to the customer.
     - Do not explain your reasoning, do not use markdown, and do not use headings.
 
-     # Interactions History (Past Conversations)
+    # Interactions History (Past Conversations)
     {texto_historico}
 
     # Context Data
@@ -274,14 +329,15 @@ def answer_commercial(state:GraphState) -> dict:
     """
     
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    
     response_ia = response.text
 
-    historico_atual.append(f"Cliente: {state['body_email']}")
-    historico_atual.append(f"Suporte: {response_ia}")
-    
-    return {"final_answer": response_ia,
-            "history": historico_atual}
+    return {
+        "final_answer": response_ia,
+        "history": [
+            HumanMessage(content=state['body_email']),
+            AIMessage(content=response_ia)
+        ]
+    }
 
 
 # Send email - new node
@@ -380,7 +436,6 @@ def process_inbound_emails():
                     "urgency": None,
                     "sentiment": None,
                     "account_level": None,
-                    "history": [],
                     "final_answer": None
                 }
 
@@ -470,16 +525,22 @@ graph.add_edge("answer_fallback",
 graph.add_edge("send_email_node",
                END)
 
-memory = MemorySaver()
-
-app = graph.compile(checkpointer=memory)
 
 
 # TEST
 if __name__ == "__main__":
-    process_inbound_emails()
+    print("🧪 [SISTEMA]: Inicializando banco de dados local da memória...")
+    
+    # O "with" garante que o arquivo de banco de dados feche corretamente se o código falhar
+    with SqliteSaver.from_conn_string("memoria_grafo.db") as memory:
+        
+        # Compila o Grafo injetando o checkpointer de disco válido
+        app = graph.compile(checkpointer=memory)
+        
+        # 🚀 Executa o leitor de e-mails reais ou mockados
+        process_inbound_emails()
 
-    png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
+""" png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
     with open("grafo_exemplo1.png", "wb") as f:
         f.write(png_bytes)
-    print("\n🖼️ Imagem do grafo atualizada com sucesso em 'grafo_exemplo1.png'!")
+    print("\n🖼️ Imagem do grafo atualizada com sucesso em 'grafo_exemplo1.png'!")"""
