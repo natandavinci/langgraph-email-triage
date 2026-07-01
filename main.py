@@ -8,7 +8,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from config.settings import DB_CONNECTION_STRING
 from graph.workflow import create_email_workflow
 from services.email_service import EmailService
-
+from langchain_core.runnables.graph import MermaidDrawMethod
 
 def process_inbound_emails():
     print("\n🚀 [SISTEMA NEYTANS]: Inicializando motor de execução de agentes...")
@@ -42,6 +42,14 @@ def process_inbound_emails():
         app = workflow.compile(checkpointer=memory)
         print("💾 [MEMÓRIA]: Conectado ao banco de persistência local.")
         
+        try:
+            png_bytes = app.get_graph().draw_mermaid_png(draw_method=MermaidDrawMethod.API)
+            with open("grafo_exemplo1.png", "wb") as f:
+                f.write(png_bytes)
+            print("🖼️ [DOCUMENTAÇÃO]: Imagem do grafo gerada com sucesso em 'grafo_exemplo1.png'!")
+        except Exception as e:
+            print(f"⚠️ [AVISO GRAFO]: Não foi possível gerar a imagem do grafo. Erro: {e}")
+
         # Gera uma thread_id dinâmica baseada no remetente para manter o histórico isolado por cliente
         remetente = email_entrada.get("sender_email", "desconhecido")
         thread_hash = hashlib.md5(remetente.encode()).hexdigest()[:12]
