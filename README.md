@@ -18,7 +18,7 @@ The core engine is a stateful graph where each node acts as a sandboxed operatio
 
 * **Stateful Memory & Persistence:** Integrated with `SqliteSaver`, amarrando o histórico de conversas do cliente através de uma `thread_id` dinâmica baseada no hash MD5 do remetente (`sender_email`). O uso de `Annotated[list, add_messages]` garante o acúmulo infinito de contexto sem sobrescrever dados.
 * **Object-Oriented Agent Design (POO):** Cada setor especializado (Suporte, Financeiro, Comercial) foi encapsulado em classes independentes. Elas injetam dinamicamente manuais operacionais escritos em Markdown diretamente no System Prompt da LLM.
-* **Structured Output Triaging:** O nó de roteamento força o modelo `gemini-1.5-flash` a obedecer a um esquema estrito do Pydantic (`EmailClassification`), mitigando falhas de parsing comuns em saídas de texto brutas.
+* **Structured Output Triaging:** O nó de roteamento força o modelo `gemini-2.5-flash` a obedecer a um esquema estrito do Pydantic (`EmailClassification`), mitigando falhas de parsing comuns em saídas de texto brutas.
 * **Real Outbound/Inbound Infrastructure:** Módulos isolados de infraestrutura para comunicação externa via protocolos industriais padrão: **IMAP** para varredura e extração limpa de e-mails não lidos, e **SMTP (SSL)** para envio automatizado de respostas técnicas de volta para a internet.
 
 ---
@@ -34,9 +34,9 @@ The core engine is a stateful graph where each node acts as a sandboxed operatio
 * **Dependency Management:** `python-dotenv` & standard tools
 
 ---
-🚀 Getting Started
+## 🚀 Getting Started
 
-Prerequisites
+* **Prerequisites**
 
 Certifique-se de possuir o ambiente virtual configurado e ativo (Python 3.12+).
 
@@ -57,26 +57,26 @@ Crie um arquivo .env na raiz absoluta do projeto contendo as suas chaves e crede
 
 GEMINI_API_KEY=sua_chave_gemini_aqui
 
-# Configurações do Provedor de E-mail (IMAP/SMTP)
+## Configurações do Provedor de E-mail (IMAP/SMTP)
 EMAIL_USER=seu_email_operacional@gmail.com
 EMAIL_PASSWORD=sua_senha_de_aplicativo_aqui
 
 
 📖 Key Lessons & Refactorings
 
-1. O Mistério da Amnésia do Grafo (add_messages)
+* 1. O Mistério da Amnésia do Grafo (add_messages)
 
 Refatorado o comportamento da chave history dentro do GraphState. Sem o decorator Annotated acoplado ao reducer add_messages, o ecossistema LangGraph opera de forma stateless, limpando memórias passadas. A implementação correta permitiu ao banco SQLite guardar e fornecer a linha do tempo exata de e-mails para cada cliente de forma isolada.
 
-2. Blindagem de Assinaturas de Métodos Condicionais
+* 2. Blindagem de Assinaturas de Métodos Condicionais
 
 Ajustado o método de decisão condicional do roteador (route_decision) utilizando propriedades @staticmethod e capturando ponteiros ocultos do compilador através de *args e kwargs. Isso sanou o erro de conflito de argumentos injetados pelo motor Pregel do LangGraph.
 
-3. Encapsulamento de Nós via Funções lambda
+* 3. Encapsulamento de Nós via Funções lambda
 
 Evitou-se o conflito de assinaturas internas de métodos homônimos (como .answer()) de instâncias distintas mapeadas no Grafo, utilizando clausuras lambda explícitas durante o registro em graph.add_node(), estabilizando a validação de nós de destino nas arestas condicionais.
 
-🎯 Project Goals Achieved
+## 🎯 Project Goals Achieved
 
 Workflows de IA altamente determinísticos: Implementação prática e controle total de fluxo utilizando grafos de estado estruturados.
 
